@@ -8,11 +8,35 @@
 import SwiftUI
 
 struct AmbientSheet: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-    }
+    
+    @Binding var selected: AmbientOption
+        @Environment(\.dismiss) private var dismiss
+
+        var body: some View {
+            NavigationStack {
+                List {
+                    ForEach(ambientOptions) { option in
+                        HStack {
+                            Label(option.name, systemImage: option.icon)
+                            Spacer()
+                            if selected == option {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selected = option
+                            dismiss()
+                        }
+                    }
+                }
+                .navigationTitle("Ambient Sound")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+        }
 }
 
 #Preview {
-    AmbientSheet()
+    AmbientSheet(selected: .constant(ambientOptions[0]))
 }
