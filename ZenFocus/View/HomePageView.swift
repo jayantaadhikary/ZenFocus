@@ -7,22 +7,54 @@
 
 import SwiftUI
 import AVFoundation
+import SwiftData
 
 struct HomePageView: View {
     
+    @Environment(\.modelContext) private var modelContext
+    @Query var allSessions: [FocusSession]
+    
     @StateObject private var audioManager = AmbientAudioManager.shared
     
-    @State var streak: Int = 1
+//    @State var streak: Int = 2
+    var sessionDays: [Date] {
+        let calendar = Calendar.current
+        let uniqueDays = Set(allSessions.map { calendar.startOfDay(for: $0.date) })
+        return Array(uniqueDays).sorted(by: >) // Latest first
+    }
+
+    var streak: Int {
+        let calendar = Calendar.current
+        var streakCount = 0
+        var currentDate = calendar.startOfDay(for: Date())
+        
+        for day in sessionDays {
+            if calendar.isDate(day, inSameDayAs: currentDate) {
+                streakCount += 1
+                currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
+            } else {
+                break
+            }
+        }
+        
+        return streakCount
+    }
+
+    
     @State private var showAmbientPicker = false
     @State private var selectedAmbient: AmbientOption = ambientOptions[0]
     
-    @State private var timeRemaining: Int = 300
-    @State private var totalTime: Int = 300
+    @State private var timeRemaining: Int = 15
+    @State private var totalTime: Int = 15
     
     @State private var isPlaying: Bool = false
     @State private var isPaused: Bool = false
     
-    @State private var focusSessionsToday: Int = 0
+    var focusSessionsToday: Int {
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        return allSessions.filter { $0.date >= startOfToday }.count
+    }
+    
     @State private var hasCompletedSession = false
     
     @State private var showAmbientPickerWarning = false
@@ -157,8 +189,16 @@ struct HomePageView: View {
                     Button {
                         print("Streak Button tapped")
                     } label: {
-                        Image(systemName: "flame.fill")
-                            .foregroundStyle(streak > 0 ? .orange : .gray)
+                        HStack{
+                           
+                            Image(systemName: "flame.fill")
+                                .foregroundStyle(streak > 0 ? .orange : .gray)
+                            if (streak > 1){
+                                Text("\(streak)")
+                                    .font(.callout)
+                                    .foregroundStyle(.orange)
+                            }
+                        }
                     }
                 }
                 ToolbarItem(placement: .topBarLeading) {
@@ -189,11 +229,24 @@ struct HomePageView: View {
                 }
                 
                 if timeRemaining == 0 && isPlaying && !hasCompletedSession {
-                    focusSessionsToday += 1
                     hasCompletedSession = true
                     isPlaying = false
                     audioManager.stop()
                     AudioServicesPlayAlertSound(1106)
+                    
+                    if let task = selectedTask {
+                            let session = FocusSession(
+                                taskName: task.name,
+                                duration: totalTime
+                            )
+                            modelContext.insert(session)
+                        }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+                if isPlaying {
+                    isPaused = true
+                    audioManager.pause()
                 }
             }
             .alert("Session Complete!", isPresented: $hasCompletedSession) {

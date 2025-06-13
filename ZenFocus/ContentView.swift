@@ -12,18 +12,25 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
     
+    @State private var selectedTab: Int = 0
+    
     var body: some View {
-        TabView {
-            Tab("Timer", systemImage: "timer"){
-                HomePageView()
-            }
-            Tab("Stats", systemImage: "chart.bar") {
-                
-            }
-            Tab("Settings", systemImage: "gearshape") {
-                
-            }
-            .badge("!")
+        TabView(selection: $selectedTab) {
+            HomePageView()
+                .tabItem {
+                    Label("Timer", systemImage: "timer")
+                }
+                .tag(0)
+            SummaryPageView(selectedTab: $selectedTab)
+                .tabItem {
+                    Label("Summary", systemImage: "chart.bar")
+                }
+                .tag(1)
+            SettingsPageView()
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .tag(2)
         }
     }
 }
