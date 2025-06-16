@@ -18,7 +18,7 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             HomePageView()
                 .tabItem {
-                    Label("Timer", systemImage: "timer")
+                    Label("Focus", systemImage: "timer")
                 }
                 .tag(0)
             SummaryPageView(selectedTab: $selectedTab)

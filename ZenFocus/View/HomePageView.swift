@@ -13,61 +13,54 @@ struct HomePageView: View {
     
     @Environment(\.modelContext) private var modelContext
     @Query var allSessions: [FocusSession]
+    @Query var userSettings: [UserSettings]
+    @Query var focusTasks: [FocusTask]
+    
     
     @StateObject private var audioManager = AmbientAudioManager.shared
     
-//    @State var streak: Int = 2
     var sessionDays: [Date] {
         let calendar = Calendar.current
         let uniqueDays = Set(allSessions.map { calendar.startOfDay(for: $0.date) })
-        return Array(uniqueDays).sorted(by: >) // Latest first
+        return Array(uniqueDays).sorted(by: >)
     }
-
+    
     var streak: Int {
         let calendar = Calendar.current
         var streakCount = 0
         var currentDate = calendar.startOfDay(for: Date())
         
-        for day in sessionDays {
-            if calendar.isDate(day, inSameDayAs: currentDate) {
-                streakCount += 1
-                currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
-            } else {
-                break
-            }
+        let sessionDaysSet = Set(sessionDays)
+        
+        while sessionDaysSet.contains(currentDate) {
+            streakCount += 1
+            currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
         }
         
         return streakCount
     }
-
+    
     
     @State private var showAmbientPicker = false
     @State private var selectedAmbient: AmbientOption = ambientOptions[0]
     
-    @State private var timeRemaining: Int = 15
-    @State private var totalTime: Int = 15
+    @State private var totalTime: Int = 0
+    @State private var timeRemaining: Int = 0
+    @State private var hasInitializedTime = false
     
     @State private var isPlaying: Bool = false
     @State private var isPaused: Bool = false
+    
+    @State private var hasCompletedSession = false
+    @State private var showAmbientPickerWarning = false
+    @State private var showTaskWarning = false
+    
+    @State private var selectedTask: FocusTask?
     
     var focusSessionsToday: Int {
         let startOfToday = Calendar.current.startOfDay(for: Date())
         return allSessions.filter { $0.date >= startOfToday }.count
     }
-    
-    @State private var hasCompletedSession = false
-    
-    @State private var showAmbientPickerWarning = false
-    
-    @State private var focusTasks: [FocusTask] = [
-        FocusTask(name: "Work", icon: "desktopcomputer"),
-        FocusTask(name: "Study", icon: "book"),
-        FocusTask(name: "Coding ", icon: "apple.terminal"),
-        FocusTask(name: "Reading", icon: "book.closed")
-    ]
-
-    @State private var selectedTask: FocusTask?
-    @State private var showTaskWarning = false
     
     private func resetTime() {
         timeRemaining = totalTime
@@ -75,6 +68,7 @@ struct HomePageView: View {
         isPaused = false
         hasCompletedSession = false
         audioManager.stop()
+        UIApplication.shared.isIdleTimerDisabled = false
     }
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -84,13 +78,15 @@ struct HomePageView: View {
             VStack {
                 Spacer()
                 
-                Text("Focus • \(focusSessionsToday) of 4")
+                Text("Focus • \(focusSessionsToday) of \(userSettings.first?.dailyTargetSessions ?? 4)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 
                 Spacer()
                 
-                TimerView(timeRemaining: timeRemaining, totalTime: totalTime)
+                if totalTime > 0 {
+                    TimerView(timeRemaining: timeRemaining, totalTime: totalTime)
+                }
                 
                 Spacer()
                 
@@ -109,22 +105,23 @@ struct HomePageView: View {
                             }
                             return
                         }
-
+                        
                         if !isPlaying {
                             isPlaying = true
                             isPaused = false
                             hasCompletedSession = false
-                            
+                            UIApplication.shared.isIdleTimerDisabled = true
                             if let sound = selectedAmbient.audioFileName {
-                                        audioManager.playSound(named: sound)
-                                    }
+                                audioManager.playSound(named: sound)
+                            }
                         } else {
                             isPaused.toggle()
+                            isPaused ? audioManager.pause() : audioManager.resume()
                             if isPaused {
-                                        audioManager.pause()
-                                    } else {
-                                        audioManager.resume()
-                                    }
+                                UIApplication.shared.isIdleTimerDisabled = false
+                            } else {
+                                UIApplication.shared.isIdleTimerDisabled = true
+                            }
                         }
                     } label: {
                         Image(systemName: !isPlaying || isPaused ? "play" : "pause")
@@ -145,7 +142,6 @@ struct HomePageView: View {
                 
                 Spacer()
                 
-                // Select Task to Focus on
                 VStack {
                     Text("What are you focusing on?")
                         .font(.headline)
@@ -155,11 +151,7 @@ struct HomePageView: View {
                         HStack {
                             ForEach(focusTasks) { item in
                                 Button {
-                                    if selectedTask == item {
-                                        selectedTask = nil
-                                    } else {
-                                        selectedTask = item
-                                    }
+                                    selectedTask = selectedTask == item ? nil : item
                                 } label: {
                                     HStack {
                                         Image(systemName: item.icon)
@@ -189,11 +181,10 @@ struct HomePageView: View {
                     Button {
                         print("Streak Button tapped")
                     } label: {
-                        HStack{
-                           
+                        HStack {
                             Image(systemName: "flame.fill")
                                 .foregroundStyle(streak > 0 ? .orange : .gray)
-                            if (streak > 1){
+                            if streak > 1 {
                                 Text("\(streak)")
                                     .font(.callout)
                                     .foregroundStyle(.orange)
@@ -220,7 +211,6 @@ struct HomePageView: View {
                         AmbientSheet(selected: $selectedAmbient)
                             .presentationDragIndicator(.visible)
                     }
-
                 }
             }
             .onReceive(timer) { _ in
@@ -235,12 +225,9 @@ struct HomePageView: View {
                     AudioServicesPlayAlertSound(1106)
                     
                     if let task = selectedTask {
-                            let session = FocusSession(
-                                taskName: task.name,
-                                duration: totalTime
-                            )
-                            modelContext.insert(session)
-                        }
+                        let session = FocusSession(taskName: task.name, duration: totalTime)
+                        modelContext.insert(session)
+                    }
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
@@ -280,23 +267,64 @@ struct HomePageView: View {
                             .transition(.opacity.combined(with: .scale))
                     }
                 }
-                .padding(.bottom, 60),
+                    .padding(.bottom, 60),
                 alignment: .top
             )
             .animation(.easeInOut, value: showTaskWarning || showAmbientPickerWarning)
-
-            
         }
         .padding(8)
+        .onAppear {
+            if userSettings.isEmpty {
+                let settings = UserSettings(defaultFocusDuration: 600, dailyTargetSessions: 4)
+                modelContext.insert(settings)
+                try? modelContext.save()
+                totalTime = settings.defaultFocusDuration
+                timeRemaining = settings.defaultFocusDuration
+            } else if let settings = userSettings.first {
+                totalTime = settings.defaultFocusDuration
+                timeRemaining = settings.defaultFocusDuration
+            }
+            
+            if focusTasks.isEmpty {
+                let defaultTasks = [
+                    FocusTask(name: "Work", icon: "desktopcomputer"),
+                    FocusTask(name: "Study", icon: "book"),
+                    FocusTask(name: "Coding", icon: "apple.terminal"),
+                    FocusTask(name: "Reading", icon: "book.closed")
+                ]
+                defaultTasks.forEach { modelContext.insert($0) }
+                try? modelContext.save()
+            }
+        }
+        .onChange(of: userSettings.first?.defaultFocusDuration) { oldValue, newValue in
+            if !isPlaying, let newVal = newValue {
+                totalTime = newVal
+                timeRemaining = newVal
+            }
+        }
+        
     }
 }
 
 #Preview("Light") {
-    HomePageView()
+    let container = try! ModelContainer(for: UserSettings.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    
+    // Insert a mock user settings object
+    let context = container.mainContext
+    context.insert(UserSettings(defaultFocusDuration: 600, dailyTargetSessions: 5))
+    
+    return HomePageView()
+        .modelContainer(container)
         .preferredColorScheme(.light)
 }
 
 #Preview("Dark") {
-    HomePageView()
+    let container = try! ModelContainer(for: UserSettings.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    
+    let context = container.mainContext
+    context.insert(UserSettings(defaultFocusDuration: 500, dailyTargetSessions: 4))
+    
+    return HomePageView()
+        .modelContainer(container)
         .preferredColorScheme(.dark)
 }

@@ -18,8 +18,9 @@ class FocusSession {
     
     init(date: Date = .now, taskName: String, duration: Int) {
         self.id = UUID()
-        self.date = date
+        self.date = Calendar.current.startOfDay(for: date)
         self.taskName = taskName
         self.duration = duration
     }
+
 }

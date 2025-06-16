@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 struct NewTaskSheet: View {
     @Environment(\.dismiss) var dismiss
@@ -49,6 +50,7 @@ struct NewTaskSheet: View {
                 
             }
             .navigationTitle("New Task")
+            .presentationDetents([.medium, .large])
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
