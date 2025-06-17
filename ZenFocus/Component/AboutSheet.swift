@@ -28,8 +28,9 @@ struct AboutSheet: View {
                 .padding()
             }
             .navigationTitle("About ZenFocus")
+            .cornerRadius(20)
         }
-        .cornerRadius(20)
+        
     }
 }
 

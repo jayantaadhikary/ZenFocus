@@ -23,12 +23,17 @@ struct SummaryPageView: View {
         let calendar = Calendar.current
         var currentDate = calendar.startOfDay(for: Date())
         var streakCount = 0
-        
+
+        // If there's no session today, backtrack to yesterday
+        if !focusDays.keys.contains(currentDate) {
+            currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
+        }
+
         while focusDays.keys.contains(currentDate) {
             streakCount += 1
             currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
         }
-        
+
         return streakCount
     }
     
@@ -157,6 +162,7 @@ struct SummaryPageView: View {
                     }
                 }
                 .frame(height: 200)
+                .animation(.easeInOut(duration: 0.5), value: focusDays)
             }
             
             // 📅 Recent Focus Days

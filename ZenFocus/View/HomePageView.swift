@@ -151,7 +151,9 @@ struct HomePageView: View {
                         HStack {
                             ForEach(focusTasks) { item in
                                 Button {
-                                    selectedTask = selectedTask == item ? nil : item
+                                    if !isPlaying {
+                                        selectedTask = selectedTask == item ? nil : item
+                                    }
                                 } label: {
                                     HStack {
                                         Image(systemName: item.icon)
@@ -161,8 +163,13 @@ struct HomePageView: View {
                                 }
                                 .padding(6)
                                 .buttonStyle(.bordered)
-                                .foregroundStyle(selectedTask == item ? .teal : .secondary)
+                                .foregroundStyle(
+                                    selectedTask == item ? .teal :
+                                    isPlaying ? .gray.opacity(0.6) : .secondary
+                                )
+                                .disabled(isPlaying)
                             }
+
                         }
                     }
                 }
@@ -191,6 +198,7 @@ struct HomePageView: View {
                             }
                         }
                     }
+                    .disabled(true)
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -267,7 +275,7 @@ struct HomePageView: View {
                             .transition(.opacity.combined(with: .scale))
                     }
                 }
-                    .padding(.bottom, 60),
+                    .padding(.bottom, 50),
                 alignment: .top
             )
             .animation(.easeInOut, value: showTaskWarning || showAmbientPickerWarning)
@@ -302,7 +310,10 @@ struct HomePageView: View {
                 timeRemaining = newVal
             }
         }
-        
+        .onDisappear {
+            resetTime()
+        }
+
     }
 }
 
