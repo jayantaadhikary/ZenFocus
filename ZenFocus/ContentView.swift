@@ -12,25 +12,32 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
     
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    
     @State private var selectedTab: Int = 0
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            HomePageView()
-                .tabItem {
-                    Label("Focus", systemImage: "timer")
-                }
-                .tag(0)
-            SummaryPageView(selectedTab: $selectedTab)
-                .tabItem {
-                    Label("Summary", systemImage: "chart.bar")
-                }
-                .tag(1)
-            SettingsPageView()
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape")
-                }
-                .tag(2)
+        if !hasCompletedOnboarding {
+            OnboardingView()
+        } else {
+            
+            TabView(selection: $selectedTab) {
+                HomePageView()
+                    .tabItem {
+                        Label("Focus", systemImage: "timer")
+                    }
+                    .tag(0)
+                SummaryPageView(selectedTab: $selectedTab)
+                    .tabItem {
+                        Label("Summary", systemImage: "chart.bar")
+                    }
+                    .tag(1)
+                SettingsPageView()
+                    .tabItem {
+                        Label("Settings", systemImage: "gearshape")
+                    }
+                    .tag(2)
+            }
         }
     }
 }

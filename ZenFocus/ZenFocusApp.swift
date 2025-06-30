@@ -5,6 +5,7 @@ import SwiftData
 struct ZenFocusApp: App {
     @State private var userSettings: UserSettings?
     
+    
     var body: some Scene {
         WindowGroup {
             AppEntryView(userSettings: $userSettings)

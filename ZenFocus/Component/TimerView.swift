@@ -31,12 +31,13 @@ struct TimerView: View {
                 .stroke(style: .init(lineWidth: 16, lineCap: .round))
                 .foregroundStyle(.teal)
                 .rotationEffect(.degrees(-90))
-                .animation(.linear(duration: 1), value: progress)
-            
+                .animation(.linear(duration: 0.3), value: progress)
+                .id(totalTime - timeRemaining) // Force view refresh on reset
             
             Text(formattedTime)
                 .font(.system(size: 68, weight: .bold, design: .rounded))
                 .monospacedDigit()
+                .contentTransition(.numericText())
             
         }
         .frame(width: 260, height: 260)

@@ -11,6 +11,8 @@ import SwiftData
 
 struct HomePageView: View {
     
+
+    
     @Environment(\.modelContext) private var modelContext
     @Query var allSessions: [FocusSession]
     @Query var userSettings: [UserSettings]
@@ -54,6 +56,9 @@ struct HomePageView: View {
     @State private var hasCompletedSession = false
     @State private var showAmbientPickerWarning = false
     @State private var showTaskWarning = false
+    @State private var showCompletionSheet = false
+    @State private var completedTaskName = ""
+    @State private var completedDuration = 0
     
     @State private var selectedTask: FocusTask?
     
@@ -71,6 +76,48 @@ struct HomePageView: View {
         UIApplication.shared.isIdleTimerDisabled = false
     }
     
+    private func updateTimer() {
+        // Handle countdown logic
+        if isPlaying && !isPaused && timeRemaining > 0 {
+            timeRemaining -= 1
+        }
+        
+        // Check for session completion
+        checkSessionCompletion()
+    }
+    
+    private func checkSessionCompletion() {
+        // Only proceed if timer has reached zero and session is active
+        if timeRemaining != 0 || !isPlaying || hasCompletedSession {
+            return
+        }
+        
+        // Mark session as complete
+        hasCompletedSession = true
+        isPlaying = false
+        
+        // Stop audio and play alert
+        audioManager.stop()
+        AudioServicesPlayAlertSound(1106)
+        
+        // Only save session if a task was selected
+        if let task = selectedTask {
+            saveCompletedSession(task: task)
+        }
+    }
+    
+    private func saveCompletedSession(task: FocusTask) {
+        // Create and save the session
+        let session = FocusSession(taskName: task.name, duration: totalTime)
+        modelContext.insert(session)
+        try? modelContext.save()
+        
+        // Prepare completion sheet data
+        completedTaskName = task.name
+        completedDuration = totalTime
+        showCompletionSheet = true
+    }
+    
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     var body: some View {
@@ -81,11 +128,23 @@ struct HomePageView: View {
                 Text("Focus • \(focusSessionsToday) of \(userSettings.first?.dailyTargetSessions ?? 4)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .animation(.easeInOut(duration: 0.3), value: focusSessionsToday)
                 
                 Spacer()
                 
                 if totalTime > 0 {
                     TimerView(timeRemaining: timeRemaining, totalTime: totalTime)
+                        .scaleEffect(isPlaying && !isPaused ? 1.02 : 1.0)
+                        .animation(isPlaying && !isPaused ? 
+                                  .easeInOut(duration: 0.8).repeatForever(autoreverses: true) : 
+                                  .easeOut(duration: 0.3), 
+                                  value: isPlaying)
+                        .id(isPlaying ? "playing-\(UUID().uuidString)" : "stopped")  // Now both are strings
+                        //MARK:- Remove the triple tap gesture for test mode
+                        .onTapGesture(count: 3) {  // Triple tap to set 10-second test timer
+                            totalTime = 10
+                            timeRemaining = 10
+                        }
                 }
                 
                 Spacer()
@@ -93,6 +152,8 @@ struct HomePageView: View {
                 Text("🎯 \(focusSessionsToday) focus session\(focusSessionsToday <= 1 ? "" : "s") completed today")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
+                    .animation(.bouncy(duration: 0.6), value: focusSessionsToday)
                 
                 Spacer()
                 
@@ -106,34 +167,44 @@ struct HomePageView: View {
                             return
                         }
                         
-                        if !isPlaying {
-                            isPlaying = true
-                            isPaused = false
-                            hasCompletedSession = false
-                            UIApplication.shared.isIdleTimerDisabled = true
-                            if let sound = selectedAmbient.audioFileName {
-                                audioManager.playSound(named: sound)
-                            }
-                        } else {
-                            isPaused.toggle()
-                            isPaused ? audioManager.pause() : audioManager.resume()
-                            if isPaused {
-                                UIApplication.shared.isIdleTimerDisabled = false
-                            } else {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            if !isPlaying {
+                                isPlaying = true
+                                isPaused = false
+                                hasCompletedSession = false
                                 UIApplication.shared.isIdleTimerDisabled = true
+                                if let sound = selectedAmbient.audioFileName {
+                                    audioManager.playSound(named: sound)
+                                }
+                            } else {
+                                isPaused.toggle()
+                                isPaused ? audioManager.pause() : audioManager.resume()
+                                if isPaused {
+                                    UIApplication.shared.isIdleTimerDisabled = false
+                                } else {
+                                    UIApplication.shared.isIdleTimerDisabled = true
+                                }
                             }
                         }
                     } label: {
                         Image(systemName: !isPlaying || isPaused ? "play" : "pause")
+                            .font(.title2)
+                            .symbolEffect(.bounce, value: isPlaying)
                         Text(!isPlaying || isPaused ? "Start" : "Pause")
                     }
                     .foregroundStyle(.primary)
                     .padding(.horizontal)
+                    .scaleEffect(selectedTask == nil ? 0.95 : 1.0)
+                    .opacity(selectedTask == nil ? 0.6 : 1.0)
+                    .animation(.easeInOut(duration: 0.2), value: selectedTask)
                     
                     Button {
-                        resetTime()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            resetTime()
+                        }
                     } label: {
                         Image(systemName: "arrow.trianglehead.clockwise.rotate.90")
+                            .font(.title2)
                         Text("Reset")
                     }
                     .foregroundStyle(.primary)
@@ -141,22 +212,25 @@ struct HomePageView: View {
                 }
                 
                 Spacer()
-                
+
                 VStack {
                     Text("What are you focusing on?")
                         .font(.headline)
                         .foregroundStyle(.secondary)
-                    
+
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
                             ForEach(focusTasks) { item in
                                 Button {
                                     if !isPlaying {
-                                        selectedTask = selectedTask == item ? nil : item
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                            selectedTask = selectedTask == item ? nil : item
+                                        }
                                     }
                                 } label: {
                                     HStack {
                                         Image(systemName: item.icon)
+                                            .symbolEffect(.pulse, value: selectedTask == item)
                                         Text(item.name)
                                     }
                                     .padding(.horizontal, 8)
@@ -168,11 +242,17 @@ struct HomePageView: View {
                                     isPlaying ? .gray.opacity(0.6) : .secondary
                                 )
                                 .disabled(isPlaying)
+                                .scaleEffect(selectedTask == item ? 1.05 : 1.0)
+                                .shadow(color: selectedTask == item ? .teal.opacity(0.3) : .clear, radius: 8)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: selectedTask)
                             }
-
                         }
+                        .padding(.horizontal, 4)
                     }
                 }
+                .opacity(isPlaying ? 0.6 : 1.0)
+                .animation(.easeInOut(duration: 0.3), value: isPlaying)
+
                 
                 Spacer()
                 
@@ -222,34 +302,14 @@ struct HomePageView: View {
                 }
             }
             .onReceive(timer) { _ in
-                if isPlaying && !isPaused && timeRemaining > 0 {
-                    timeRemaining -= 1
-                }
-                
-                if timeRemaining == 0 && isPlaying && !hasCompletedSession {
-                    hasCompletedSession = true
-                    isPlaying = false
-                    audioManager.stop()
-                    AudioServicesPlayAlertSound(1106)
-                    
-                    if let task = selectedTask {
-                        let session = FocusSession(taskName: task.name, duration: totalTime)
-                        modelContext.insert(session)
-                    }
-                }
+                // Handle countdown logic
+                updateTimer()
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
                 if isPlaying {
                     isPaused = true
                     audioManager.pause()
                 }
-            }
-            .alert("Session Complete!", isPresented: $hasCompletedSession) {
-                Button("Ok", role: .cancel) {
-                    resetTime()
-                }
-            } message: {
-                Text("Great job! You’ve completed a focus session.")
             }
             .overlay(
                 VStack(spacing: 8) {
@@ -279,6 +339,19 @@ struct HomePageView: View {
                 alignment: .top
             )
             .animation(.easeInOut, value: showTaskWarning || showAmbientPickerWarning)
+            .sheet(isPresented: $showCompletionSheet, onDismiss: {
+                // Called when sheet is dismissed
+                resetTime()
+                hasCompletedSession = false
+            }) {
+                SessionCompletionSheet(
+                    taskName: completedTaskName,
+                    duration: completedDuration,
+                    streakCount: streak,
+                    dailyCount: focusSessionsToday
+                )
+                .presentationDragIndicator(.visible)
+            }
         }
         .padding(8)
         .onAppear {
