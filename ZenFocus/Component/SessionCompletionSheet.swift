@@ -15,6 +15,7 @@ struct SessionCompletionSheet: View {
     let streakCount: Int
     let dailyCount: Int
     var onDismiss: () -> Void = {}
+    var onBreakRequest: () -> Void = {}
     
     // Break up computed properties
     var formattedTime: String {
@@ -72,20 +73,40 @@ struct SessionCompletionSheet: View {
         }
     }
     
-    var actionButton: some View {
-        Button {
-            dismiss()
-            onDismiss()
-        } label: {
-            Text("Done")
+    var actionButtons: some View {
+        VStack(spacing: 12) {
+            Button {
+                dismiss()
+                onBreakRequest()
+            } label: {
+                HStack {
+                    Image(systemName: "cup.and.saucer")
+                    Text("Take a Break")
+                }
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(.teal)
+                        .fill(.blue)
                 )
                 .foregroundStyle(.white)
+            }
+            
+            Button {
+                dismiss()
+                onDismiss()
+            } label: {
+                Text("Continue")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.teal)
+                    )
+                    .foregroundStyle(.white)
+            }
         }
     }
     
@@ -113,8 +134,8 @@ struct SessionCompletionSheet: View {
                 
                 Spacer()
                 
-                // Action Button
-                actionButton
+                // Action Buttons
+                actionButtons
                     .padding(.horizontal, 20)
                     .padding(.bottom, 30)
             }

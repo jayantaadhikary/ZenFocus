@@ -57,6 +57,7 @@ struct HomePageView: View {
     @State private var showAmbientPickerWarning = false
     @State private var showTaskWarning = false
     @State private var showCompletionSheet = false
+    @State private var showBreakReminder = false
     @State private var completedTaskName = ""
     @State private var completedDuration = 0
     
@@ -348,9 +349,19 @@ struct HomePageView: View {
                     taskName: completedTaskName,
                     duration: completedDuration,
                     streakCount: streak,
-                    dailyCount: focusSessionsToday
+                    dailyCount: focusSessionsToday,
+                    onBreakRequest: {
+                        // Show break reminder sheet when requested
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            showBreakReminder = true
+                        }
+                    }
                 )
                 .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showBreakReminder) {
+                BreakReminderView(showBreakTimer: $showBreakReminder)
+                    .presentationDragIndicator(.visible)
             }
         }
         .padding(8)

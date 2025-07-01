@@ -1,4 +1,4 @@
-# ✅ ZenFocus – Project TODOs
+# ✅ ZenFocus – Project Roadmap
 
 Keep track of key next steps, features, and launch milestones for ZenFocus.
 
@@ -13,31 +13,67 @@ Keep track of key next steps, features, and launch milestones for ZenFocus.
 
 ---
 
-## 🛠️ Phase 1 – Premium Features (Core Monetization)
+## 🆓 Core Free Features (Priority Order)
 
-### 🔢 Custom Focus Durations
+### ⚡ High Priority
 
-- [ ] Lock duration picker for free users to presets (e.g. 25, 40, 60 min)
-- [ ] Unlock arbitrary durations with premium
-- [ ] Show subtle "🔒 Premium" label on locked options
+- [x] Basic timer functionality with preset durations
+- [x] Focus sessions tracking and completion
+- [x] Basic statistics (streak, total time)
+- [x] Onboarding flow with initial setup
+- [x] Default focus tasks (Work, Study, etc.)
+- [x] ~~Simple break reminders after sessions~~ ✅ Added break timer with tips and 5-minute countdown
+- [ ] Task selection before starting a session
+- [ ] Basic pause/resume functionality improvements
+- [ ] Session completion sound options (3-5 free sounds)
 
-### ⏱️ Pomodoro / Break Support
+### 🌟 Medium Priority
 
-- [ ] Design break session flow (e.g. 25m Focus / 5m Break)
-- [ ] Add ability to customize focus/break intervals (premium only)
-- [ ] Add sounds or visuals for breaks
+- [ ] Daily target tracking and reminders
+- [ ] Weekly view for completed sessions
+- [ ] Session history list
+- [ ] Data reset option
+- [ ] App icon badge showing active sessions
+- [ ] Session ended confirmation dialog
+- [ ] App backgrounding improvements for timer
 
-### 🎧 Premium Ambient Sounds
+### � Low Priority
 
-- [ ] Add 3–4 new audio tracks (fireplace, café, waves, etc.)
-- [ ] Lock them behind premium
-- [ ] Show waveform or preview in ambient picker
+- [ ] Haptic feedback for interactions
+- [ ] Smoother animations and transitions
+- [ ] Better empty states and guidance
+- [ ] Dark/Light mode theme improvements
+- [ ] Basic achievements (5+ completed sessions, etc.)
 
-### 📝 Session Journaling
+---
 
-- [ ] After session ends, allow note entry ("What did you focus on?")
-- [ ] Store notes with each FocusSession
-- [ ] Optional: export / edit history (Phase 2)
+## 💎 Premium Features (For Monetization)
+
+### 💵 Premium Tier 1 (Initial Offering)
+
+- [ ] Custom timer durations (beyond presets)
+- [ ] Session notes and reflection
+- [ ] Unlimited custom tasks (free limited to 5)
+- [ ] Break timer automation (Pomodoro workflow)
+- [ ] 10+ additional ambient sounds
+
+### � Premium Tier 2 (Advanced Features)
+
+- [ ] Advanced statistics and insights
+- [ ] Focus heat map calendar view
+- [ ] Time-of-day productivity analysis
+- [ ] Task completion patterns and recommendations
+- [ ] Multiple custom app icons
+- [ ] Data export (CSV/JSON)
+
+### 🚀 Premium Tier 3 (Power User)
+
+- [ ] iCloud sync across devices
+- [ ] Multiple focus profiles (Work/Study/Creative)
+- [ ] Focus scheduling
+- [ ] Widget support for quick timers
+- [ ] Advanced break suggestions and activities
+- [ ] API integrations (Calendar, Tasks)
 
 ---
 
@@ -46,28 +82,20 @@ Keep track of key next steps, features, and launch milestones for ZenFocus.
 ### 🧩 RevenueCat Integration
 
 - [ ] Create a RevenueCat project
-- [ ] Define entitlements & offerings
+- [ ] Define entitlements & offerings (Tier 1, 2, 3)
 - [ ] Integrate SDK into app
 - [ ] Add paywall screen with feature list
 - [ ] Handle restore purchases / receipt validation
 
 ---
 
-## 📊 Phase 2 – Advanced Insights (Optional for Later)
+## � Technical Improvements
 
-- [ ] Weekly and monthly focus trends
-- [ ] Top tasks breakdown by time
-- [ ] Longest streak history visualization
-- [ ] Task-based filtering in charts
-
----
-
-## 🎨 Phase 3 – User Delight Features
-
-- [ ] Custom themes or app icons
-- [ ] Lock mode (screen stays on, prevent exit)
-- [ ] Data export (CSV, JSON)
-- [ ] iCloud sync
+- [ ] Refactor timer state management
+- [ ] Improve SwiftData models and relationships
+- [ ] Unit testing for core functionality
+- [ ] Performance optimization for statistics view
+- [ ] Accessibility improvements
 
 ---
 
@@ -80,5 +108,3 @@ Keep track of key next steps, features, and launch milestones for ZenFocus.
 - [ ] Build minimal landing page / blog post
 
 ---
-
-_Last updated: July 1, 2025_
