@@ -23,9 +23,9 @@ Keep track of key next steps, features, and launch milestones for ZenFocus.
 - [x] Onboarding flow with initial setup
 - [x] Default focus tasks (Work, Study, etc.)
 - [x] ~~Simple break reminders after sessions~~ ✅ Added break timer with tips and 5-minute countdown
-- [ ] Task selection before starting a session
-- [ ] Basic pause/resume functionality improvements
-- [ ] Session completion sound options (3-5 free sounds)
+- [x] Task selection before starting a session
+- [x] ~~Basic pause/resume functionality improvements~~ ✅ Enhanced with visual indicators, state persistence, and session analytics
+<!-- - [ ] Session completion sound options (3-5 free sounds) -->
 
 ### 🌟 Medium Priority
 

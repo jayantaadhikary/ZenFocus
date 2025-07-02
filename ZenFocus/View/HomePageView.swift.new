@@ -38,7 +38,6 @@ struct HomePageView: View {
         return streakCount
     }
     
-    
     @State private var showAmbientPicker = false
     @State private var selectedAmbient: AmbientOption = ambientOptions[0]
     
@@ -161,15 +160,15 @@ struct HomePageView: View {
                 
                 if totalTime > 0 {
                     TimerView(
-                        timeRemaining: timeRemaining,
+                        timeRemaining: timeRemaining, 
                         totalTime: totalTime,
                         isPaused: isPaused
                     )
                     .scaleEffect(isPlaying && !isPaused ? 1.02 : 1.0)
-                    .animation(isPlaying && !isPaused ?
-                        .easeInOut(duration: 0.8).repeatForever(autoreverses: true) :
-                            .easeOut(duration: 0.3),
-                               value: isPlaying)
+                    .animation(isPlaying && !isPaused ? 
+                              .easeInOut(duration: 0.8).repeatForever(autoreverses: true) : 
+                              .easeOut(duration: 0.3), 
+                              value: isPlaying)
                     .id("timer-\(isPlaying ? "playing" : "stopped")-\(isPaused ? "paused" : "active")")
                     //MARK:- Remove the triple tap gesture for test mode
                     .onTapGesture(count: 3) {  // Triple tap to set 10-second test timer
@@ -178,11 +177,11 @@ struct HomePageView: View {
                     }
                     // Indicate pause state with subtle animation
                     .overlay(
-                        isPaused ?
-                        RoundedRectangle(cornerRadius: 130)
-                            .stroke(Color.orange.opacity(0.2), lineWidth: 2)
-                            .frame(width: 270, height: 270)
-                        : nil
+                        isPaused ? 
+                            RoundedRectangle(cornerRadius: 130)
+                                .stroke(Color.orange.opacity(0.2), lineWidth: 2)
+                                .frame(width: 270, height: 270)
+                            : nil
                     )
                 }
                 
@@ -290,8 +289,8 @@ struct HomePageView: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(isPaused ? Color.orange.opacity(0.1) :
-                                    (isPlaying ? Color.secondary.opacity(0.1) : Color.green.opacity(0.1)))
+                            .fill(isPaused ? Color.orange.opacity(0.1) : 
+                                 (isPlaying ? Color.secondary.opacity(0.1) : Color.green.opacity(0.1)))
                     )
                     .scaleEffect(selectedTask == nil ? 0.95 : 1.0)
                     .opacity(selectedTask == nil ? 0.6 : 1.0)
@@ -304,7 +303,7 @@ struct HomePageView: View {
                             resetTime()
                         }
                     } label: {
-                        Image(systemName: "arrow.trianglehead.clockwise.rotate.90")
+                        Image(systemName: "arrow.trianglepath")
                             .font(.title2)
                         Text("Reset")
                     }
@@ -313,12 +312,12 @@ struct HomePageView: View {
                 }
                 
                 Spacer()
-                
+
                 VStack {
                     Text("What are you focusing on?")
                         .font(.headline)
                         .foregroundStyle(.secondary)
-                    
+
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
                             ForEach(focusTasks) { item in
@@ -331,21 +330,22 @@ struct HomePageView: View {
                                 } label: {
                                     HStack {
                                         Image(systemName: item.icon)
-                                            .symbolEffect(.pulse, value: selectedTask == item)
+                                            .font(.body)
+                                            .frame(width: 24)
                                         Text(item.name)
                                     }
-                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(selectedTask == item ? Color.accentColor : Color(.systemGray6))
+                                    )
+                                    .foregroundColor(selectedTask == item ? .white : .primary)
                                 }
-                                .padding(6)
-                                .buttonStyle(.bordered)
-                                .foregroundStyle(
-                                    selectedTask == item ? .teal :
-                                        isPlaying ? .gray.opacity(0.6) : .secondary
-                                )
+                                .buttonStyle(.plain)
+                                .opacity(isPlaying && selectedTask != item ? 0.4 : 1.0)
+                                .scaleEffect(isPlaying && selectedTask != item ? 0.95 : 1.0)
                                 .disabled(isPlaying)
-                                .scaleEffect(selectedTask == item ? 1.05 : 1.0)
-                                .shadow(color: selectedTask == item ? .teal.opacity(0.3) : .clear, radius: 8)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: selectedTask)
                             }
                         }
                         .padding(.horizontal, 4)
@@ -353,11 +353,11 @@ struct HomePageView: View {
                 }
                 .opacity(isPlaying ? 0.6 : 1.0)
                 .animation(.easeInOut(duration: 0.3), value: isPlaying)
-                
+
                 
                 Spacer()
                 
-                Text("“Do what you can, with what you have, where you are.”")
+                Text(""Do what you can, with what you have, where you are."")
                     .font(.footnote)
                     .italic()
                     .foregroundStyle(.secondary)
@@ -427,7 +427,7 @@ struct HomePageView: View {
                 // Check if we should resume from saved state
                 if UserDefaults.standard.bool(forKey: "isSessionActive") {
                     // If we have a saved pause state, update pause duration
-                    if UserDefaults.standard.bool(forKey: "isPaused"),
+                    if UserDefaults.standard.bool(forKey: "isPaused"), 
                        let pauseStartTime = UserDefaults.standard.object(forKey: "pauseStartTime") as? Date {
                         let pauseDuration = Int(Date().timeIntervalSince(pauseStartTime))
                         totalPausedTime += pauseDuration
@@ -522,7 +522,7 @@ struct HomePageView: View {
                 let wasPaused = UserDefaults.standard.bool(forKey: "isPaused")
                 let taskIDString = UserDefaults.standard.string(forKey: "activeTaskID")
                 
-                if savedTimeRemaining > 0, let taskIDString = taskIDString,
+                if savedTimeRemaining > 0, let taskIDString = taskIDString, 
                    let taskID = UUID(uuidString: taskIDString) {
                     // Find the matching task
                     if let task = focusTasks.first(where: { $0.id == taskID }) {
@@ -570,30 +570,28 @@ struct HomePageView: View {
         .onDisappear {
             resetTime()
         }
-        
     }
 }
+
+#Preview("Light") {
+    let container = try! ModelContainer(for: UserSettings.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     
+    // Insert a mock user settings object
+    let context = container.mainContext
+    context.insert(UserSettings(defaultFocusDuration: 600, dailyTargetSessions: 5))
     
-    #Preview("Light") {
-        let container = try! ModelContainer(for: UserSettings.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
-        
-        // Insert a mock user settings object
-        let context = container.mainContext
-        context.insert(UserSettings(defaultFocusDuration: 600, dailyTargetSessions: 5))
-        
-        return HomePageView()
-            .modelContainer(container)
-            .preferredColorScheme(.light)
-    }
+    return HomePageView()
+        .modelContainer(container)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark") {
+    let container = try! ModelContainer(for: UserSettings.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     
-    #Preview("Dark") {
-        let container = try! ModelContainer(for: UserSettings.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
-        
-        let context = container.mainContext
-        context.insert(UserSettings(defaultFocusDuration: 500, dailyTargetSessions: 4))
-        
-        return HomePageView()
-            .modelContainer(container)
-            .preferredColorScheme(.dark)
-    }
+    let context = container.mainContext
+    context.insert(UserSettings(defaultFocusDuration: 500, dailyTargetSessions: 4))
+    
+    return HomePageView()
+        .modelContainer(container)
+        .preferredColorScheme(.dark)
+}
