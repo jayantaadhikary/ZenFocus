@@ -28,47 +28,59 @@ struct TimerView: View {
             Circle()
                 .stroke(.secondary.opacity(0.15), lineWidth: 16)
             
-            // Progress ring
+            // Progress ring with enhanced animations
             Circle()
                 .trim(from:0, to: progress)
                 .stroke(style: .init(lineWidth: 16, lineCap: .round))
                 .foregroundStyle(isPaused ? Color.orange : Color.teal)
                 .rotationEffect(.degrees(-90))
-                .animation(.linear(duration: 0.3), value: progress)
+                .animation(.smooth(duration: 0.5), value: progress)
+                .animation(.smooth(duration: 0.4), value: isPaused)
                 .id(totalTime - timeRemaining) // Force view refresh on reset
             
-            // Time display
-            VStack(spacing: 0) {
+            // Time display with enhanced styling
+            VStack(spacing: 4) {
                 Text(formattedTime)
                     .font(.system(size: 68, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .contentTransition(.numericText())
                     .opacity(isPaused ? 0.7 : 1.0)
+                    .scaleEffect(isPaused ? 0.98 : 1.0)
+                    .animation(.smooth(duration: 0.3), value: isPaused)
                 
-                // Pause indicator
+                // Enhanced pause indicator
                 if isPaused {
                     Text("PAUSED")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.orange)
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 16)
                         .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.orange.opacity(0.1))
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.orange.opacity(0.15))
+                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
                         )
-                        .transition(.scale.combined(with: .opacity))
+                        .transition(.asymmetric(
+                            insertion: .scale(scale: 0.8).combined(with: .opacity).combined(with: .move(edge: .bottom)),
+                            removal: .scale(scale: 1.2).combined(with: .opacity).combined(with: .move(edge: .bottom))
+                        ))
+                        .animation(.bouncy(duration: 0.5, extraBounce: 0.3), value: isPaused)
                 }
             }
         }
         .frame(width: 260, height: 260)
         .overlay(
-            // Pulsating pause indicator ring for paused state
+            // Enhanced pulsating pause indicator ring
             isPaused ?
             Circle()
-                .stroke(Color.orange.opacity(0.2), lineWidth: 6)
-                .frame(width: 280, height: 280)
-                .scaleEffect(isPaused ? [1.0, 1.05].randomElement()! : 1.0)
-                .animation(.easeInOut(duration: 1.5).repeatForever(), value: isPaused)
+                .stroke(Color.orange.opacity(0.2), lineWidth: 4)
+                .frame(width: 285, height: 285)
+                .scaleEffect(isPaused ? 1.05 : 1.0)
+                .opacity(isPaused ? 0.8 : 0.0)
+                .animation(
+                    .easeInOut(duration: 2.0).repeatForever(autoreverses: true),
+                    value: isPaused
+                )
             : nil
         )
     }

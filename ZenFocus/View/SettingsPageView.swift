@@ -47,12 +47,41 @@ struct SettingsForm: View {
     @State private var showManageTasksSheet: Bool = false
     @State private var showAboutSheet = false
     @State private var showProSheet = false
+    @State private var showResetConfirmation = false
+    @State private var showResetSuccess = false
+    @Environment(\.modelContext) private var modelContext
 
 
     
     func openEmail() {
         guard let url = URL(string: "mailto:jayadky@yahoo.com?subject=ZenFocus Feedback") else { return }
         UIApplication.shared.open(url)
+    }
+    
+    // Clear session history and reset statistics
+    private func clearSessionHistory() {
+        do {
+            // Delete all FocusSession records only
+            try modelContext.delete(model: FocusSession.self)
+            
+            // Clear only session-related UserDefaults (keep onboarding status)
+            let sessionKeys = [
+                "timeRemaining", "totalTime", "selectedTaskName", "isPlaying",
+                "isPaused", "hasCompletedSession", "pauseCount", "totalPausedTime",
+                "pauseStartTime"
+                // Note: NOT clearing "hasCompletedOnboarding"
+            ]
+            sessionKeys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
+            
+            // Save changes
+            try modelContext.save()
+            
+            showResetSuccess = true
+            print("Session history cleared successfully")
+            
+        } catch {
+            print("Failed to clear session history: \(error.localizedDescription)")
+        }
     }
     
     var body: some View {
@@ -151,6 +180,24 @@ struct SettingsForm: View {
                     
                     SettingsRow(label: "Contact Developer", icon: "envelope") {
                         openEmail()
+                    }
+                    
+                    // Clear Session History Option
+                    SettingsRow(label: "Clear Session History", icon: "clock.arrow.circlepath", color: .orange) {
+                        showResetConfirmation = true
+                    }
+                    .alert("Clear Session History?", isPresented: $showResetConfirmation) {
+                        Button("Cancel", role: .cancel) { }
+                        Button("Clear", role: .destructive) {
+                            clearSessionHistory()
+                        }
+                    } message: {
+                        Text("This will permanently delete all your completed focus sessions and statistics. Your settings and tasks will be preserved.")
+                    }
+                    .alert("Session History Cleared", isPresented: $showResetSuccess) {
+                        Button("OK") { }
+                    } message: {
+                        Text("All session history and statistics have been cleared. Your streak and progress will reset to zero.")
                     }
                     
                     

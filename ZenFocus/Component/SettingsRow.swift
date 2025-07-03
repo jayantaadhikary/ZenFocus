@@ -11,6 +11,7 @@ import SwiftUI
 struct SettingsRow: View {
     var label: String
     var icon: String
+    var color: Color = .primary
     var action: (() -> Void)? = nil
 
     var body: some View {
@@ -20,6 +21,7 @@ struct SettingsRow: View {
             HStack {
                 Label(label, systemImage: icon)
                     .labelStyle(.titleAndIcon)
+                    .foregroundStyle(color)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .foregroundStyle(.gray)

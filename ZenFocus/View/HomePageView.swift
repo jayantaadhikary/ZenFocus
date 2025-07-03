@@ -25,17 +25,23 @@ struct HomePageView: View {
     
     var streak: Int {
         let calendar = Calendar.current
-        var streakCount = 0
-        var currentDate = calendar.startOfDay(for: Date())
+        let today = calendar.startOfDay(for: Date())
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
         
         let sessionDaysSet = Set(sessionDays)
         
-        while sessionDaysSet.contains(currentDate) {
-            streakCount += 1
-            currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
+        // Start from yesterday if no sessions today, otherwise start from today
+        let startDate = sessionDaysSet.contains(today) ? today : yesterday
+        
+        var currentStreak = 0
+        var checkDate = startDate
+        
+        while sessionDaysSet.contains(checkDate) {
+            currentStreak += 1
+            checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
         }
         
-        return streakCount
+        return currentStreak
     }
     
     
@@ -68,6 +74,28 @@ struct HomePageView: View {
         return allSessions.filter { $0.date >= startOfToday }.count
     }
     
+    // Motivational message based on daily progress
+    private func motivationalMessage(completed: Int, target: Int) -> String {
+        let progress = Double(completed) / Double(target)
+        
+        switch progress {
+        case 1...:
+            return "🎉 Daily goal achieved! Amazing work!"
+        case 0.8..<1:
+            return "🔥 Almost there! One more session to go"
+        case 0.5..<0.8:
+            return "💪 Great progress! Keep it up"
+        case 0.25..<0.5:
+            return "🌱 Good start! You're building momentum"
+        default:
+            if completed == 0 {
+                return "🚀 Ready to start your focus journey?"
+            } else {
+                return "✨ Every session counts! Keep going"
+            }
+        }
+    }
+    
     private func resetTime() {
         timeRemaining = totalTime
         timeElapsed = 0
@@ -80,8 +108,8 @@ struct HomePageView: View {
         audioManager.stop()
         UIApplication.shared.isIdleTimerDisabled = false
         
-        // Save pause state to UserDefaults
-        UserDefaults.standard.setValue(false, forKey: "isSessionActive")
+        // Clear session data using helper function
+        clearSessionData()
     }
     
     private func updateTimer() {
@@ -101,12 +129,12 @@ struct HomePageView: View {
     }
     
     private func checkSessionCompletion() {
-        // Only proceed if timer has reached zero and session is active
-        if timeRemaining != 0 || !isPlaying || hasCompletedSession {
-            return
+        // Enhanced completion check with race condition protection
+        guard timeRemaining <= 0 && !hasCompletedSession && isPlaying else { 
+            return 
         }
         
-        // Mark session as complete
+        // Mark session as complete immediately to prevent race conditions
         hasCompletedSession = true
         isPlaying = false
         
@@ -114,35 +142,87 @@ struct HomePageView: View {
         audioManager.stop()
         AudioServicesPlayAlertSound(1106)
         
-        // Only save session if a task was selected
+        // Only save session if a task was selected and session was meaningful
         if let task = selectedTask {
             saveCompletedSession(task: task)
         }
     }
     
     private func saveCompletedSession(task: FocusTask) {
-        // Create and save the session with enhanced data
+        // Session validation - ensure valid session data
+        let actualTimeSpent = totalTime - timeRemaining
+        guard totalTime > 0 else {
+            print("Invalid session data - not saving")
+            return
+        }
+        
+        // Create session with actual time spent, not total time
         let session = FocusSession(
             taskName: task.name,
-            duration: totalTime,
+            duration: actualTimeSpent, // Save actual time spent, not total time
             pauseCount: pauseCount,
             totalPausedTime: totalPausedTime,
             completionDate: Date()
         )
-        modelContext.insert(session)
-        try? modelContext.save()
         
-        // Prepare completion sheet data
+        // Enhanced error handling for data persistence
+        do {
+            modelContext.insert(session)
+            try modelContext.save()
+            print("Session saved successfully: \(task.name), \(actualTimeSpent)s")
+        } catch {
+            print("Failed to save session: \(error.localizedDescription)")
+            // Could show user notification here in the future
+        }
+        
+        // Prepare completion sheet data with actual time spent
         completedTaskName = task.name
-        completedDuration = totalTime
+        completedDuration = actualTimeSpent
         showCompletionSheet = true
         
         // Clear session state from UserDefaults
-        UserDefaults.standard.removeObject(forKey: "isSessionActive")
-        UserDefaults.standard.removeObject(forKey: "timeRemaining")
-        UserDefaults.standard.removeObject(forKey: "timeElapsed")
-        UserDefaults.standard.removeObject(forKey: "isPaused")
-        UserDefaults.standard.removeObject(forKey: "pauseStartTime")
+        clearSessionData()
+    }
+    
+    // Enhanced session state restoration with validation
+    private func restoreSessionState() {
+        guard let savedTime = UserDefaults.standard.object(forKey: "timeRemaining") as? Int,
+              let savedTotalTime = UserDefaults.standard.object(forKey: "totalTime") as? Int,
+              let savedTaskName = UserDefaults.standard.string(forKey: "selectedTaskName"),
+              savedTime > 0, savedTotalTime > 0 else {
+            return
+        }
+        
+        // Find the task by name
+        if let task = focusTasks.first(where: { $0.name == savedTaskName }) {
+            timeRemaining = savedTime
+            totalTime = savedTotalTime
+            selectedTask = task
+            isPlaying = UserDefaults.standard.bool(forKey: "isPlaying")
+            isPaused = UserDefaults.standard.bool(forKey: "isPaused")
+            hasCompletedSession = UserDefaults.standard.bool(forKey: "hasCompletedSession")
+            pauseCount = UserDefaults.standard.integer(forKey: "pauseCount")
+            totalPausedTime = UserDefaults.standard.integer(forKey: "totalPausedTime")
+            
+            // Restore pause timing if needed
+            if isPaused {
+                lastPauseStartTime = UserDefaults.standard.object(forKey: "pauseStartTime") as? Date
+            }
+            
+            print("Session state restored: \(savedTaskName), \(savedTime)s remaining")
+        }
+    }
+    
+    // Enhanced session data cleanup
+    private func clearSessionData() {
+        let sessionKeys = [
+            "timeRemaining", "totalTime", "selectedTaskName", "isPlaying", 
+            "isPaused", "hasCompletedSession", "pauseCount", "totalPausedTime", 
+            "pauseStartTime"
+        ]
+        
+        sessionKeys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
+        print("Session data cleared from UserDefaults")
     }
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -152,10 +232,72 @@ struct HomePageView: View {
             VStack {
                 Spacer()
                 
-                Text("Focus • \(focusSessionsToday) of \(userSettings.first?.dailyTargetSessions ?? 4)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .animation(.easeInOut(duration: 0.3), value: focusSessionsToday)
+                // Enhanced Daily Target Tracking
+                VStack(spacing: 8) {
+                    let dailyTarget = userSettings.first?.dailyTargetSessions ?? 4
+                    let progress = min(Double(focusSessionsToday) / Double(dailyTarget), 1.0)
+                    let isGoalMet = focusSessionsToday >= dailyTarget
+                    
+                    // Progress indicator
+                    HStack(spacing: 12) {
+                        // Progress ring
+                        ZStack {
+                            Circle()
+                                .stroke(Color.secondary.opacity(0.2), lineWidth: 3)
+                                .frame(width: 32, height: 32)
+                            
+                            Circle()
+                                .trim(from: 0, to: progress)
+                                .stroke(
+                                    isGoalMet ? Color.green : Color.accentColor,
+                                    style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                                )
+                                .frame(width: 32, height: 32)
+                                .rotationEffect(.degrees(-90))
+                                .animation(.easeInOut(duration: 0.6), value: progress)
+                            
+                            if isGoalMet {
+                                Image(systemName: "checkmark")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(.green)
+                                    .scaleEffect(isGoalMet ? 1.0 : 0.0)
+                                    .animation(.bouncy(duration: 0.6), value: isGoalMet)
+                            }
+                        }
+                        
+                        // Progress text and motivational message
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Focus • \(focusSessionsToday) of \(dailyTarget)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.primary)
+                                .contentTransition(.numericText())
+                            
+                            // Motivational message
+                            Text(motivationalMessage(completed: focusSessionsToday, target: dailyTarget))
+                                .font(.caption)
+                                .foregroundStyle(isGoalMet ? .green : .secondary)
+                                .animation(.easeInOut(duration: 0.4), value: focusSessionsToday)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.secondary.opacity(0.05))
+                            .stroke(
+                                isGoalMet ? Color.green.opacity(0.3) : Color.clear,
+                                lineWidth: 1
+                            )
+                    )
+                    .padding(.horizontal, 20) // Add horizontal margin for rounded corners
+                    .scaleEffect(isGoalMet ? 1.02 : 1.0)
+                    .animation(.bouncy(duration: 0.6), value: isGoalMet)
+                }
+                .animation(.smooth(duration: 0.4), value: focusSessionsToday)
                 
                 Spacer()
                 
@@ -166,22 +308,47 @@ struct HomePageView: View {
                         isPaused: isPaused
                     )
                     .scaleEffect(isPlaying && !isPaused ? 1.02 : 1.0)
-                    .animation(isPlaying && !isPaused ?
-                        .easeInOut(duration: 0.8).repeatForever(autoreverses: true) :
-                            .easeOut(duration: 0.3),
-                               value: isPlaying)
+                    .animation(
+                        isPlaying && !isPaused ? 
+                            .easeInOut(duration: 2.0).repeatForever(autoreverses: true) :
+                            .smooth(duration: 0.6),
+                        value: isPlaying
+                    )
+                    .animation(.smooth(duration: 0.4), value: isPaused)
+                    .rotation3DEffect(
+                        .degrees(isPaused ? 2 : 0),
+                        axis: (x: 0, y: 1, z: 0)
+                    )
+                    .animation(.smooth(duration: 0.5), value: isPaused)
                     .id("timer-\(isPlaying ? "playing" : "stopped")-\(isPaused ? "paused" : "active")")
                     //MARK:- Remove the triple tap gesture for test mode
                     .onTapGesture(count: 3) {  // Triple tap to set 10-second test timer
-                        totalTime = 10
-                        timeRemaining = 10
+                        withAnimation(.bouncy(duration: 0.8)) {
+                            totalTime = 10
+                            timeRemaining = 10
+                        }
                     }
-                    // Indicate pause state with subtle animation
+                    // Enhanced pause state indicator
                     .overlay(
                         isPaused ?
-                        RoundedRectangle(cornerRadius: 130)
-                            .stroke(Color.orange.opacity(0.2), lineWidth: 2)
-                            .frame(width: 270, height: 270)
+                        ZStack {
+                            // Outer pulse ring
+                            Circle()
+                                .stroke(Color.orange.opacity(0.3), lineWidth: 3)
+                                .frame(width: 290, height: 290)
+                                .scaleEffect(isPaused ? 1.1 : 1.0)
+                                .opacity(isPaused ? 0.8 : 0.0)
+                                .animation(
+                                    .easeInOut(duration: 1.5).repeatForever(autoreverses: true),
+                                    value: isPaused
+                                )
+                            
+                            // Inner subtle ring
+                            RoundedRectangle(cornerRadius: 130)
+                                .stroke(Color.orange.opacity(0.4), lineWidth: 2)
+                                .frame(width: 270, height: 270)
+                        }
+                        .transition(.scale.combined(with: .opacity))
                         : nil
                     )
                 }
@@ -192,7 +359,9 @@ struct HomePageView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
-                    .animation(.bouncy(duration: 0.6), value: focusSessionsToday)
+                    .animation(.bouncy(duration: 0.8, extraBounce: 0.2), value: focusSessionsToday)
+                    .scaleEffect(focusSessionsToday > 0 ? 1.0 : 0.95)
+                    .animation(.smooth(duration: 0.3), value: focusSessionsToday)
                 
                 Spacer()
                 
@@ -206,7 +375,7 @@ struct HomePageView: View {
                             return
                         }
                         
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        withAnimation(.smooth(duration: 0.5, extraBounce: 0.1)) {
                             if !isPlaying {
                                 // Start a new session
                                 isPlaying = true
@@ -227,12 +396,14 @@ struct HomePageView: View {
                                     audioManager.playSound(named: sound)
                                 }
                                 
-                                // Haptic feedback
+                                // Enhanced haptic feedback
                                 let impact = UIImpactFeedbackGenerator(style: .medium)
                                 impact.impactOccurred()
                             } else {
-                                // Toggle pause state
-                                isPaused.toggle()
+                                // Toggle pause state with smoother animation
+                                withAnimation(.smooth(duration: 0.3)) {
+                                    isPaused.toggle()
+                                }
                                 
                                 if isPaused {
                                     // Entering pause state
@@ -245,7 +416,7 @@ struct HomePageView: View {
                                     UserDefaults.standard.setValue(true, forKey: "isPaused")
                                     UserDefaults.standard.setValue(Date(), forKey: "pauseStartTime")
                                     
-                                    // Haptic feedback
+                                    // Softer haptic feedback for pause
                                     let impact = UIImpactFeedbackGenerator(style: .soft)
                                     impact.impactOccurred()
                                 } else {
@@ -263,53 +434,79 @@ struct HomePageView: View {
                                     UserDefaults.standard.setValue(totalPausedTime, forKey: "totalPausedTime")
                                     UserDefaults.standard.setValue(pauseCount, forKey: "pauseCount")
                                     
-                                    // Haptic feedback
+                                    // Stronger haptic feedback for resume
                                     let impact = UIImpactFeedbackGenerator(style: .rigid)
                                     impact.impactOccurred()
                                 }
                             }
                         }
                     } label: {
-                        // Better button state representation
+                        // Enhanced button state representation with smooth transitions
                         Group {
                             if !isPlaying {
                                 Label("Start", systemImage: "play.fill")
                                     .font(.headline)
+                                    .symbolEffect(.bounce, value: !isPlaying)
                             } else if isPaused {
                                 Label("Resume", systemImage: "play.fill")
                                     .font(.headline)
+                                    .symbolEffect(.pulse, options: .repeating, value: isPaused)
                             } else {
                                 Label("Pause", systemImage: "pause.fill")
                                     .font(.headline)
+                                    .symbolEffect(.variableColor, value: isPlaying)
                             }
                         }
-                        .contentTransition(.symbolEffect(.replace))
+                        .contentTransition(.symbolEffect(.replace.byLayer))
                     }
                     .foregroundStyle(isPaused ? .orange : (isPlaying ? .primary : .green))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
                     .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(isPaused ? Color.orange.opacity(0.1) :
-                                    (isPlaying ? Color.secondary.opacity(0.1) : Color.green.opacity(0.1)))
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(isPaused ? Color.orange.opacity(0.15) :
+                                    (isPlaying ? Color.secondary.opacity(0.1) : Color.green.opacity(0.15)))
+                            .shadow(
+                                color: isPaused ? .orange.opacity(0.3) : 
+                                       (isPlaying ? .clear : .green.opacity(0.3)),
+                                radius: isPaused || !isPlaying ? 4 : 0,
+                                x: 0, y: 2
+                            )
                     )
                     .scaleEffect(selectedTask == nil ? 0.95 : 1.0)
                     .opacity(selectedTask == nil ? 0.6 : 1.0)
-                    .animation(.easeInOut(duration: 0.2), value: selectedTask)
-                    .animation(.easeInOut(duration: 0.2), value: isPaused)
-                    .animation(.easeInOut(duration: 0.2), value: isPlaying)
+                    .animation(.smooth(duration: 0.3), value: selectedTask)
+                    .animation(.smooth(duration: 0.4), value: isPaused)
+                    .animation(.smooth(duration: 0.4), value: isPlaying)
+                    .scaleEffect(selectedTask == nil ? 0.95 : 1.0)
+                    .animation(.bouncy(duration: 0.4), value: selectedTask != nil)
                     
                     Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        withAnimation(.bouncy(duration: 0.6, extraBounce: 0.3)) {
                             resetTime()
                         }
+                        
+                        // Add haptic feedback for reset
+                        let impact = UIImpactFeedbackGenerator(style: .light)
+                        impact.impactOccurred()
                     } label: {
-                        Image(systemName: "arrow.trianglehead.clockwise.rotate.90")
-                            .font(.title2)
-                        Text("Reset")
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.trianglehead.clockwise.rotate.90")
+                                .font(.title2)
+                                .symbolEffect(.rotate, value: timeRemaining != totalTime)
+                            Text("Reset")
+                        }
                     }
                     .foregroundStyle(.primary)
-                    .padding(.horizontal)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.secondary.opacity(0.1))
+                    )
+                    .scaleEffect(isPlaying ? 0.95 : 1.0)
+                    .opacity(isPlaying ? 0.7 : 1.0)
+                    .animation(.smooth(duration: 0.3), value: isPlaying)
                 }
                 
                 Spacer()
@@ -320,39 +517,54 @@ struct HomePageView: View {
                         .foregroundStyle(.secondary)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack {
+                        HStack(spacing: 12) {
                             ForEach(focusTasks) { item in
                                 Button {
                                     if !isPlaying {
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                        withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
                                             selectedTask = selectedTask == item ? nil : item
                                         }
+                                        
+                                        // Add subtle haptic feedback for task selection
+                                        let impact = UIImpactFeedbackGenerator(style: .light)
+                                        impact.impactOccurred()
                                     }
                                 } label: {
-                                    HStack {
+                                    HStack(spacing: 8) {
                                         Image(systemName: item.icon)
-                                            .symbolEffect(.pulse, value: selectedTask == item)
+                                            .symbolEffect(.bounce, value: selectedTask == item)
                                         Text(item.name)
+                                            .font(.subheadline)
+                                            .fontWeight(selectedTask == item ? .semibold : .medium)
                                     }
-                                    .padding(.horizontal, 8)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(selectedTask == item ? Color.teal : Color.secondary.opacity(0.1))
+                                            .shadow(
+                                                color: selectedTask == item ? .teal.opacity(0.3) : .clear,
+                                                radius: selectedTask == item ? 6 : 0,
+                                                x: 0, y: 2
+                                            )
+                                    )
+                                    .foregroundStyle(
+                                        selectedTask == item ? .white :
+                                            isPlaying ? .gray.opacity(0.6) : .primary
+                                    )
                                 }
-                                .padding(6)
-                                .buttonStyle(.bordered)
-                                .foregroundStyle(
-                                    selectedTask == item ? .teal :
-                                        isPlaying ? .gray.opacity(0.6) : .secondary
-                                )
                                 .disabled(isPlaying)
-                                .scaleEffect(selectedTask == item ? 1.05 : 1.0)
-                                .shadow(color: selectedTask == item ? .teal.opacity(0.3) : .clear, radius: 8)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: selectedTask)
+                                .scaleEffect(selectedTask == item ? 1.02 : 1.0)
+                                .animation(.smooth(duration: 0.3), value: selectedTask)
+                                .animation(.easeInOut(duration: 0.2), value: isPlaying)
                             }
                         }
                         .padding(.horizontal, 4)
                     }
                 }
                 .opacity(isPlaying ? 0.6 : 1.0)
-                .animation(.easeInOut(duration: 0.3), value: isPlaying)
+                .scaleEffect(isPlaying ? 0.98 : 1.0)
+                .animation(.smooth(duration: 0.4), value: isPlaying)
                 
                 
                 Spacer()
@@ -435,33 +647,48 @@ struct HomePageView: View {
                 }
             }
             .overlay(
-                VStack(spacing: 8) {
+                VStack(spacing: 12) {
                     if showTaskWarning {
                         Text("Please select a focus task first.")
                             .font(.footnote)
+                            .fontWeight(.medium)
                             .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(.red.opacity(0.9))
-                            .clipShape(Capsule())
-                            .transition(.opacity.combined(with: .scale))
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(
+                                Capsule()
+                                    .fill(.red.opacity(0.9))
+                                    .shadow(color: .red.opacity(0.3), radius: 8, x: 0, y: 4)
+                            )
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .top).combined(with: .scale(scale: 0.8)).combined(with: .opacity),
+                                removal: .move(edge: .top).combined(with: .scale(scale: 1.1)).combined(with: .opacity)
+                            ))
                     }
                     
                     if showAmbientPickerWarning {
                         Text("Stop the timer to change ambient sound.")
                             .font(.footnote)
+                            .fontWeight(.medium)
                             .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(.gray.opacity(0.9))
-                            .clipShape(Capsule())
-                            .transition(.opacity.combined(with: .scale))
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(
+                                Capsule()
+                                    .fill(.gray.opacity(0.9))
+                                    .shadow(color: .gray.opacity(0.3), radius: 8, x: 0, y: 4)
+                            )
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .top).combined(with: .scale(scale: 0.8)).combined(with: .opacity),
+                                removal: .move(edge: .top).combined(with: .scale(scale: 1.1)).combined(with: .opacity)
+                            ))
                     }
                 }
-                    .padding(.bottom, 50),
+                .padding(.bottom, 50),
                 alignment: .top
             )
-            .animation(.easeInOut, value: showTaskWarning || showAmbientPickerWarning)
+            .animation(.bouncy(duration: 0.6, extraBounce: 0.2), value: showTaskWarning)
+            .animation(.bouncy(duration: 0.6, extraBounce: 0.2), value: showAmbientPickerWarning)
             .sheet(isPresented: $showCompletionSheet, onDismiss: {
                 // Called when sheet is dismissed
                 resetTime()
@@ -514,51 +741,7 @@ struct HomePageView: View {
             
             // Restore session state if app was closed/terminated during an active session
             if UserDefaults.standard.bool(forKey: "isSessionActive") {
-                // Get saved values
-                let savedTimeRemaining = UserDefaults.standard.integer(forKey: "timeRemaining")
-                let savedTimeElapsed = UserDefaults.standard.integer(forKey: "timeElapsed")
-                let savedPauseCount = UserDefaults.standard.integer(forKey: "pauseCount")
-                let savedTotalPausedTime = UserDefaults.standard.integer(forKey: "totalPausedTime")
-                let wasPaused = UserDefaults.standard.bool(forKey: "isPaused")
-                let taskIDString = UserDefaults.standard.string(forKey: "activeTaskID")
-                
-                if savedTimeRemaining > 0, let taskIDString = taskIDString,
-                   let taskID = UUID(uuidString: taskIDString) {
-                    // Find the matching task
-                    if let task = focusTasks.first(where: { $0.id == taskID }) {
-                        // Restore task selection
-                        selectedTask = task
-                        
-                        // Restore timer state
-                        timeRemaining = savedTimeRemaining
-                        timeElapsed = savedTimeElapsed
-                        pauseCount = savedPauseCount
-                        totalPausedTime = savedTotalPausedTime
-                        
-                        // Set state but don't auto-resume
-                        isPlaying = true
-                        isPaused = true // Always start paused when restored
-                        
-                        // Show restoration alert
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            let generator = UINotificationFeedbackGenerator()
-                            generator.notificationOccurred(.warning)
-                            
-                            // Show session restoration alert
-                            let minutes = savedTimeRemaining / 60
-                            let seconds = savedTimeRemaining % 60
-                            let timeText = String(format: "%d:%02d", minutes, seconds)
-                            
-                            // This would be a more elegant solution with a custom alert,
-                            // but for now we'll use the warning system
-                            showTaskWarning = false
-                            showAmbientPickerWarning = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                showAmbientPickerWarning = false
-                            }
-                        }
-                    }
-                }
+                restoreSessionState()
             }
         }
         .onChange(of: userSettings.first?.defaultFocusDuration) { oldValue, newValue in

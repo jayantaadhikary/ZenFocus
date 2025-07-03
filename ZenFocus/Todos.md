@@ -1,6 +1,6 @@
 # ✅ ZenFocus – Project Roadmap
 
-Keep track of key next steps, features, and launch milestones for ZenFocus.
+A comprehensive roadmap outlining key next steps, features, and launch milestones for ZenFocus.
 
 ---
 
@@ -29,21 +29,30 @@ Keep track of key next steps, features, and launch milestones for ZenFocus.
 
 ### 🌟 Medium Priority
 
-- [ ] Daily target tracking and reminders
+- [x] ~~Daily target tracking and reminders~~ ✅ Added progress indicator with motivational messages
 - [ ] Weekly view for completed sessions
 - [ ] Session history list
-- [ ] Data reset option
+- [x] ~~Clear session history option~~ ✅ Added to Settings with confirmation dialogs
 - [ ] App icon badge showing active sessions
 - [ ] Session ended confirmation dialog
 - [ ] App backgrounding improvements for timer
+- [ ] Notification reminders for daily targets
+- [ ] **Settings page improvements:**
+  - [ ] Sound/Audio settings (completion sounds, volume control)
+  - [ ] Focus session settings (auto-pause on background, haptic feedback)
+  - [ ] Visual improvements (better icons, spacing, typography)
+  - [ ] Data & Privacy section enhancements
 
-### � Low Priority
+### 🔧 Low Priority
 
 - [ ] Haptic feedback for interactions
-- [ ] Smoother animations and transitions
+- [x] ~~Smoother animations and transitions~~ ✅ Enhanced with bouncy animations, smooth transitions, and visual effects
 - [ ] Better empty states and guidance
-- [ ] Dark/Light mode theme improvements
 - [ ] Basic achievements (5+ completed sessions, etc.)
+- [ ] **Settings accessibility improvements:**
+  - [ ] VoiceOver support
+  - [ ] Dynamic type support
+  - [ ] High contrast mode support
 
 ---
 
@@ -51,19 +60,19 @@ Keep track of key next steps, features, and launch milestones for ZenFocus.
 
 ### 💵 Premium Tier 1 (Initial Offering)
 
+- [ ] **Multiple custom app icons** (5-8 variants, keep 1-2 free)
 - [ ] Custom timer durations (beyond presets)
 - [ ] Session notes and reflection
 - [ ] Unlimited custom tasks (free limited to 5)
 - [ ] Break timer automation (Pomodoro workflow)
 - [ ] 10+ additional ambient sounds
 
-### � Premium Tier 2 (Advanced Features)
+### 🎯 Premium Tier 2 (Advanced Features)
 
 - [ ] Advanced statistics and insights
 - [ ] Focus heat map calendar view
 - [ ] Time-of-day productivity analysis
 - [ ] Task completion patterns and recommendations
-- [ ] Multiple custom app icons
 - [ ] Data export (CSV/JSON)
 
 ### 🚀 Premium Tier 3 (Power User)
@@ -89,7 +98,7 @@ Keep track of key next steps, features, and launch milestones for ZenFocus.
 
 ---
 
-## � Technical Improvements
+## 🔧 Technical Improvements
 
 - [ ] Refactor timer state management
 - [ ] Improve SwiftData models and relationships
