@@ -49,6 +49,7 @@ struct SettingsForm: View {
     @State private var showProSheet = false
     @State private var showResetConfirmation = false
     @State private var showResetSuccess = false
+    @State private var showAudioSettingsSheet = false
     @Environment(\.modelContext) private var modelContext
 
 
@@ -116,6 +117,18 @@ struct SettingsForm: View {
                     .padding(.vertical, 8)
                     .sheet(isPresented: $showManageTasksSheet) {
                         ManageTasksSheet()
+                    }
+                    
+                    Button {
+                        showAudioSettingsSheet = true
+                    } label: {
+                        Label("Audio Settings", systemImage: "speaker.2")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.vertical, 8)
+                    .sheet(isPresented: $showAudioSettingsSheet) {
+                        AudioSettingsSheet()
+                            .presentationDetents([.medium, .large])
                     }
                 }
                 .padding(.top, 4)

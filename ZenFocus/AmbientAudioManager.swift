@@ -10,7 +10,19 @@ import AVFoundation
 
 class AmbientAudioManager: ObservableObject {
     static let shared = AmbientAudioManager()
-    private var player: AVAudioPlayer?
+    var player: AVAudioPlayer? // Make accessible for volume control
+    @Published var currentVolume: Float = 0.5
+    
+    private init() {
+        // Load saved volume setting
+        currentVolume = UserDefaults.standard.float(forKey: "ambientVolume")
+        if currentVolume == 0 { currentVolume = 0.5 } // Default value
+    }
+    
+    func setVolume(_ volume: Float) {
+        currentVolume = max(0.0, min(1.0, volume))
+        player?.volume = currentVolume
+    }
 
     func playSound(named name: String) {
         stop() // stop any previous playback
@@ -19,7 +31,7 @@ class AmbientAudioManager: ObservableObject {
             do {
                 player = try AVAudioPlayer(contentsOf: url)
                 player?.numberOfLoops = -1
-                player?.volume = 0.5
+                player?.volume = currentVolume
                 player?.play()
             } catch {
                 print("Failed to play sound \(name): \(error.localizedDescription)")

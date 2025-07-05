@@ -140,7 +140,12 @@ struct HomePageView: View {
         
         // Stop audio and play alert
         audioManager.stop()
-        AudioServicesPlayAlertSound(1106)
+        
+        // Play completion sound if enabled
+        let enableCompletionSound = UserDefaults.standard.object(forKey: "enableCompletionSound") as? Bool ?? true
+        if enableCompletionSound {
+            AudioServicesPlayAlertSound(1106)
+        }
         
         // Only save session if a task was selected and session was meaningful
         if let task = selectedTask {

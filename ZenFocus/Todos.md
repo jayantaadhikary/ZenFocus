@@ -30,11 +30,11 @@ A comprehensive roadmap outlining key next steps, features, and launch milestone
 ### 🌟 Medium Priority
 
 - [x] ~~Daily target tracking and reminders~~ ✅ Added progress indicator with motivational messages
-- [ ] Weekly view for completed sessions
+- [x] ~~Weekly view for completed sessions~~ ✅ Enhanced calendar view with visual intensity indicators
 - [ ] Session history list
 - [x] ~~Clear session history option~~ ✅ Added to Settings with confirmation dialogs
 - [ ] App icon badge showing active sessions
-- [ ] Session ended confirmation dialog
+- [x] Session ended confirmation dialog
 - [ ] App backgrounding improvements for timer
 - [ ] Notification reminders for daily targets
 - [ ] **Settings page improvements:**

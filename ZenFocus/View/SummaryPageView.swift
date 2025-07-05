@@ -138,31 +138,9 @@ struct SummaryPageView: View {
                 }
             }
             
-            // 📊 Focus Trend Chart
-            GroupBox(label: Label("Focus Trend (Last 7 Days)", systemImage: "chart.bar.doc.horizontal")) {
-                let calendar = Calendar.current
-                let today = calendar.startOfDay(for: Date())
-                let last7Days = (0..<7).map { calendar.date(byAdding: .day, value: -$0, to: today)! }.reversed()
-
-                Chart {
-                    ForEach(last7Days, id: \.self) { date in
-                        BarMark(
-                            x: .value("Date", date, unit: .day),
-                            y: .value("Minutes", (focusDays[date] ?? 0) / 60)
-                        )
-                        .foregroundStyle(Color.accentColor)
-                        .cornerRadius(4)
-                    }
-                }
-                .chartXAxis {
-                    AxisMarks(values: .stride(by: .day)) { _ in
-                        AxisGridLine()
-                        AxisTick()
-                        AxisValueLabel(format: .dateTime.weekday(.narrow))
-                    }
-                }
-                .frame(height: 200)
-                .animation(.easeInOut(duration: 0.5), value: focusDays)
+            // � Enhanced Weekly View
+            GroupBox(label: Label("This Week", systemImage: "calendar.badge.clock")) {
+                WeeklyCalendarView(sessions: allSessions)
             }
             
             // 📅 Recent Focus Days
